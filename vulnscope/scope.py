@@ -61,7 +61,13 @@ class Scope:
         A target is a hostname, a hostname suffix beginning with '.', an IP, or
         a CIDR. Blank lines and '#' comments are ignored."""
         s = cls()
-        for raw in lines:
+        for i, raw in enumerate(lines):
+            # Strip a UTF-8 BOM if this is the first line. Windows editors and
+            # PowerShell's Set-Content -Encoding utf8 both prepend one, and a
+            # scope parser that rejects a file Notepad saved is a parser with a
+            # bug, not a strict parser.
+            if i == 0:
+                raw = raw.lstrip("﻿")
             line = raw.split("#", 1)[0].strip()
             if not line:
                 continue
