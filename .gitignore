@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.html
+*.json
+!package.json
+scope.txt

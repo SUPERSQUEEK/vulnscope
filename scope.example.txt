@@ -1,0 +1,6 @@
+# vulnscope scope file. Each line: allow|deny <host|.suffix|ip|cidr>
+# Only targets matching an allow rule (and no deny rule) are scanned.
+
+allow amirslm.com
+allow files.amirslm.com
+# llm.amirslm.com is intentionally NOT listed, to demonstrate deny-by-default.
