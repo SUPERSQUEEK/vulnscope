@@ -86,6 +86,23 @@ Stated plainly, because they bound what a clean report means:
 - **No authenticated scanning.** It sees what an unauthenticated visitor sees — which is the attacker's view, and the point, but it will not find issues that require a login.
 - **Findings are what can be observed without intrusion.** A missing header is a fact; whether it is exploitable depends on the app. Severities reflect observable weakness, not confirmed exploitability.
 
+## GUI
+
+A tkinter desktop app ships alongside the CLI - no extra dependencies, since
+tkinter is part of the Python standard library on Windows.
+
+```bash
+python -m vulnscope.gui          # or double-click vulnscope-gui.pyw
+```
+
+Enter target(s) and an authorization string, press **Scan**, and findings
+appear in a severity-coloured table; selecting one shows its evidence and fix.
+**Save HTML** / **Save JSON** export the same reports as the CLI. The scan runs
+on a worker thread and communicates with the UI through a queue drained on a
+timer - the standard thread-safe tkinter pattern - so the window stays
+responsive while a scan is in flight. The authorization field is required here
+exactly as it is on the command line.
+
 ## Requires
 
 Python 3.10+ (standard library only). No dependencies.
