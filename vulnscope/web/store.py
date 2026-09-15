@@ -31,6 +31,9 @@ class ScanRecord:
     id: str
     targets: list
     authorized_by: str
+    scope_text: str = ""
+    timeout: float = 6.0
+    ingest_text: str = ""
     status: str = "running"  # running | done | error
     events: list = field(default_factory=list)
     report: object = None
@@ -38,6 +41,13 @@ class ScanRecord:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds"))
     _subscribers: list = field(default_factory=list, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def config(self):
+        return {
+            "targets": self.targets, "scope_text": self.scope_text,
+            "authorized_by": self.authorized_by, "timeout": self.timeout,
+            "ingest_text": self.ingest_text,
+        }
 
     def emit(self, msg):
         with self._lock:
@@ -80,9 +90,10 @@ class ScanStore:
         self._lock = threading.Lock()
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    def start(self, targets, scope_text, authorized_by, timeout, ingest=None):
+    def start(self, targets, scope_text, authorized_by, timeout, ingest=None, ingest_text=""):
         scan_id = uuid.uuid4().hex[:12]
-        record = ScanRecord(id=scan_id, targets=targets, authorized_by=authorized_by)
+        record = ScanRecord(id=scan_id, targets=targets, authorized_by=authorized_by,
+                             scope_text=scope_text, timeout=timeout, ingest_text=ingest_text)
         with self._lock:
             self._scans[scan_id] = record
 
@@ -126,12 +137,30 @@ class ScanStore:
         path = REPORTS_DIR / f"{record.id}.json"
         payload = record.report.to_dict()
         payload["id"] = record.id
+        payload["config"] = record.config()
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(payload, fh, indent=2)
 
     def get(self, scan_id):
         with self._lock:
             return self._scans.get(scan_id)
+
+    def get_config(self, scan_id):
+        record = self.get(scan_id)
+        if record is not None:
+            return record.config()
+        path = REPORTS_DIR / f"{scan_id}.json"
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data.get("config")
+        return None
+
+    def delete(self, scan_id):
+        with self._lock:
+            self._scans.pop(scan_id, None)
+        path = REPORTS_DIR / f"{scan_id}.json"
+        if path.exists():
+            path.unlink()
 
     def list_recent(self, limit=50):
         with self._lock:

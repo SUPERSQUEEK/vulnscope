@@ -9,37 +9,15 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><h1>vulnscope</h1><span>web</span></div>
+    <div class="brand"><span class="mark">V</span><h1>vulnscope</h1></div>
     <p class="tagline">Governed, non-intrusive vulnerability assessment.</p>
 
-    <form id="scan-form">
-      <div class="section-title">New scan</div>
+    <button type="button" class="primary new-scan-btn" id="open-new-scan">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      New scan
+    </button>
 
-      <label class="req" for="targets">Targets (one per line)</label>
-      <textarea id="targets" rows="3" placeholder="example.com&#10;192.0.2.10" required></textarea>
-
-      <label class="req" for="scope">Scope (allow / deny rules)</label>
-      <textarea id="scope" rows="4" placeholder="allow example.com&#10;allow .example.com&#10;deny admin.example.com" required></textarea>
-
-      <label class="req" for="authorized-by">Authorized by</label>
-      <input type="text" id="authorized-by" placeholder="Amir (own infra)" required>
-
-      <div class="row">
-        <div>
-          <label for="timeout">Timeout (s)</label>
-          <input type="number" id="timeout" value="6" min="1" max="60" step="0.5">
-        </div>
-      </div>
-
-      <details>
-        <summary>Ingest recon JSON instead of sweeping ports</summary>
-        <label for="ingest">ReconScope JSON or {"host":[ports]}</label>
-        <textarea id="ingest" rows="3" placeholder="optional"></textarea>
-      </details>
-
-      <button type="submit" class="primary scan-btn" id="scan-submit">Start scan</button>
-      <p id="form-error" class="tagline" style="color:#e2554f;display:none;"></p>
-    </form>
+    <div class="stats-row" id="stats-row"></div>
 
     <div class="section-title">History</div>
     <div class="history" id="history"></div>
@@ -47,11 +25,60 @@
 
   <main class="main" id="main">
     <div class="empty-state">
+      <div class="mark-lg">V</div>
       <h2>No scan selected</h2>
-      <p>Fill in targets, a scope, and who authorized this, then start a scan.</p>
+      <p>Start a new scan to assess a target you're authorized to test, or pick a past scan from the history on the left.</p>
     </div>
   </main>
 </div>
+
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">New scan</h2>
+      <button type="button" class="ghost icon-only" id="close-modal">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="scan-form">
+      <label class="req" for="targets">Targets <small>(one per line &mdash; hostnames or IPs, not full URLs)</small></label>
+      <textarea id="targets" rows="3" placeholder="example.com&#10;192.0.2.10" required></textarea>
+      <p class="field-hint">Paste a URL and the scheme/port/path are stripped automatically.</p>
+
+      <label class="req" for="scope">Scope <small>(allow / deny rules)</small></label>
+      <textarea id="scope" rows="4" placeholder="allow example.com&#10;allow .example.com&#10;deny admin.example.com" required></textarea>
+
+      <label class="req" for="authorized-by">Authorized by</label>
+      <input type="text" id="authorized-by" placeholder="Amir (own infra)" required>
+
+      <div class="row">
+        <div>
+          <label for="timeout">Timeout <small>(seconds)</small></label>
+          <input type="number" id="timeout" value="6" min="1" max="60" step="0.5">
+        </div>
+      </div>
+
+      <details id="ingest-details">
+        <summary>Ingest recon JSON instead of sweeping ports</summary>
+        <label for="ingest">ReconScope JSON or {"host":[ports]}</label>
+        <textarea id="ingest" rows="3" placeholder="optional"></textarea>
+      </details>
+
+      <p class="field-error" id="form-error"></p>
+
+      <div class="modal-foot">
+        <button type="button" class="ghost" id="cancel-modal">Cancel</button>
+        <button type="submit" class="primary" id="scan-submit">
+          <svg class="icon" viewBox="0 0 24 24"><path d="m5 3 14 9-14 9V3z"/></svg>
+          Start scan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script src="/app.js"></script>
 </body>
 </html>
