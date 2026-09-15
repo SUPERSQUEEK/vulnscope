@@ -2,9 +2,14 @@
 The engine: guard each target, run the checkers, collect findings.
 
 Order matters. PortChecker runs first and hands the discovered open-port set to
-every checker after it, so the TLS and HTTP checks only touch ports that are
-actually listening. Each target is guarded immediately before its checkers run,
-and the guard returns the vetted IP that every checker then connects to.
+every checker after it, so the TLS, HTTP, and banner checks only touch ports
+that are actually listening. Each target is guarded immediately before its
+checkers run, and the guard returns the vetted IP that every checker then
+connects to.
+
+DnsChecker is the one exception: it never opens a socket to the target at all
+(it asks a public resolver about the domain's own published records), so it
+runs for every guarded target regardless of what ports are open.
 """
 
 from __future__ import annotations
@@ -14,6 +19,8 @@ from .findings import Report
 from .checkers.ports import PortChecker
 from .checkers.tls import TlsChecker
 from .checkers.http import HttpChecker
+from .checkers.dns import DnsChecker
+from .checkers.banners import BannerChecker
 
 
 def run_scan(targets, scope, authorized_by, scope_summary, ingest=None, timeout=6.0, on_event=None):
@@ -26,7 +33,8 @@ def run_scan(targets, scope, authorized_by, scope_summary, ingest=None, timeout=
             on_event(msg)
 
     port_checker = PortChecker(timeout=timeout)
-    followups = [TlsChecker(timeout=timeout), HttpChecker(timeout=timeout)]
+    dns_checker = DnsChecker(timeout=timeout)
+    followups = [TlsChecker(timeout=timeout), HttpChecker(timeout=timeout), BannerChecker(timeout=timeout)]
 
     for target in targets:
         # Fail-closed authorization, immediately before we touch anything.
@@ -39,6 +47,12 @@ def run_scan(targets, scope, authorized_by, scope_summary, ingest=None, timeout=
 
         ip = ips[0]
         emit(f"scanning {target} ({ip})")
+
+        try:
+            for f in dns_checker.run(target, ip, set()):
+                report.add(f)
+        except Exception as e:  # a checker must never abort the whole run
+            report.errors.append(f"{target}: dns error: {e}")
 
         preset = ingest.get(target) if ingest else None
         port_checker.discovered = set()

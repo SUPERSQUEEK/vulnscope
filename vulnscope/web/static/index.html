@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vulnscope</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><h1>vulnscope</h1><span>web</span></div>
+    <p class="tagline">Governed, non-intrusive vulnerability assessment.</p>
+
+    <form id="scan-form">
+      <div class="section-title">New scan</div>
+
+      <label class="req" for="targets">Targets (one per line)</label>
+      <textarea id="targets" rows="3" placeholder="example.com&#10;192.0.2.10" required></textarea>
+
+      <label class="req" for="scope">Scope (allow / deny rules)</label>
+      <textarea id="scope" rows="4" placeholder="allow example.com&#10;allow .example.com&#10;deny admin.example.com" required></textarea>
+
+      <label class="req" for="authorized-by">Authorized by</label>
+      <input type="text" id="authorized-by" placeholder="Amir (own infra)" required>
+
+      <div class="row">
+        <div>
+          <label for="timeout">Timeout (s)</label>
+          <input type="number" id="timeout" value="6" min="1" max="60" step="0.5">
+        </div>
+      </div>
+
+      <details>
+        <summary>Ingest recon JSON instead of sweeping ports</summary>
+        <label for="ingest">ReconScope JSON or {"host":[ports]}</label>
+        <textarea id="ingest" rows="3" placeholder="optional"></textarea>
+      </details>
+
+      <button type="submit" class="primary scan-btn" id="scan-submit">Start scan</button>
+      <p id="form-error" class="tagline" style="color:#e2554f;display:none;"></p>
+    </form>
+
+    <div class="section-title">History</div>
+    <div class="history" id="history"></div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="empty-state">
+      <h2>No scan selected</h2>
+      <p>Fill in targets, a scope, and who authorized this, then start a scan.</p>
+    </div>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
