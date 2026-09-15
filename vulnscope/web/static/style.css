@@ -335,8 +335,6 @@ button.icon-only { padding: 7px; }
 .finding .extra .copy-btn { flex-shrink: 0; }
 
 .errors { margin-top: 28px; }
-.errors ul { color: var(--muted); font-size: 0.84rem; margin: 0; padding-left: 18px; }
-.errors li { margin: 4px 0; }
 
 .no-results { color: var(--dim); padding: 40px 0; text-align: center; }
 

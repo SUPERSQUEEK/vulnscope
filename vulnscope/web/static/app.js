@@ -243,12 +243,19 @@ function renderMissing() {
 }
 
 function renderError(status) {
+  const d = status.error_detail;
   main.innerHTML = `
     <div class="run-header">
       <div class="title-row"><h2>${escapeHtml((status.targets || []).join(", "))}</h2><span class="badge error">error</span></div>
       <p class="meta">authorized by: <b>${escapeHtml(status.authorized_by || "")}</b></p>
     </div>
-    <div class="log"><span class="line err">${escapeHtml(status.error || "scan failed")}</span></div>`;
+    <div class="finding critical" style="cursor:default">
+      <h3><span class="badge critical">failed</span> ${escapeHtml(status.error || "scan failed")}</h3>
+      ${d ? `<div class="extra" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-soft);max-height:none">
+        <p class="ev"><span class="txt">why: ${escapeHtml(d.reason)}</span></p>
+        <p class="fix">fix: ${escapeHtml(d.fix)}</p>
+      </div>` : ""}
+    </div>`;
 }
 
 function renderRunning(status) {
@@ -366,8 +373,8 @@ function renderReport(id, report) {
     <div id="findings-root"></div>
     ${report.errors && report.errors.length ? `
       <div class="errors">
-        <div class="section-title">Refusals &amp; errors</div>
-        <ul>${report.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>
+        <div class="section-title">Refusals &amp; errors (${report.errors.length})</div>
+        <div class="findings">${report.errors.map((e, i) => errorCard(e, report.errors_detail?.[i])).join("")}</div>
       </div>` : ""}
   `;
 
@@ -391,6 +398,9 @@ function renderReport(id, report) {
   el("#group-on")?.addEventListener("click", () => { groupByTarget = true; renderReport(id, currentReport); });
   el("#group-off")?.addEventListener("click", () => { groupByTarget = false; renderReport(id, currentReport); });
 
+  const errorsEl = el(".errors");
+  if (errorsEl) wireFindingCards(errorsEl);
+
   renderFindings();
 }
 
@@ -403,6 +413,17 @@ function matchesFilters(f) {
     if (!hay.includes(searchText)) return false;
   }
   return true;
+}
+
+function errorCard(message, detail) {
+  const isRefusal = message.startsWith("REFUSED");
+  return `<div class="finding ${isRefusal ? "high" : "critical"}">
+    <h3><span class="badge ${isRefusal ? "high" : "critical"}">${isRefusal ? "refused" : "error"}</span> ${escapeHtml(message)}${ICONS.chevron}</h3>
+    ${detail ? `<div class="extra">
+      <p class="ev"><span class="txt">why: ${escapeHtml(detail.reason)}</span></p>
+      <p class="fix">fix: ${escapeHtml(detail.fix)}</p>
+    </div>` : ""}
+  </div>`;
 }
 
 function findingCard(f) {

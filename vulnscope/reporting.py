@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 import html
 
+from . import diagnostics
+
 SEV_COLOR = {"critical": "31;1", "high": "33;1", "medium": "36", "low": "90", "info": "90"}
 SEV_HTML = {"critical": "#e2554f", "high": "#e0a33a", "medium": "#7aa2ff", "low": "#6b7684", "info": "#3a424c"}
 
@@ -41,6 +43,10 @@ def console(report):
         out.append("errors / refusals:")
         for e in report.errors:
             out.append(f"    {e}")
+            d = diagnostics.explain(e)
+            if d:
+                out.append(f"    \033[90mwhy: {d['reason']}\033[0m")
+                out.append(f"    \033[90mfix: {d['fix']}\033[0m")
     return "\n".join(out)
 
 
@@ -71,8 +77,12 @@ def to_html(report):
     )
     errs = ""
     if report.errors:
-        items = "".join(f"<li>{html.escape(e)}</li>" for e in report.errors)
-        errs = f"<h2>Refusals &amp; errors</h2><ul class='errs'>{items}</ul>"
+        items = []
+        for e in report.errors:
+            d = diagnostics.explain(e)
+            extra = f"<br><span class='why'>why: {html.escape(d['reason'])}</span><br><span class='errfix'>fix: {html.escape(d['fix'])}</span>" if d else ""
+            items.append(f"<li>{html.escape(e)}{extra}</li>")
+        errs = f"<h2>Refusals &amp; errors</h2><ul class='errs'>{''.join(items)}</ul>"
     return f"""<!doctype html><html><head><meta charset='utf-8'>
 <title>vulnscope report</title><style>
 body{{background:#0b0d10;color:#e8ecf1;font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;max-width:920px;margin:0 auto;padding:40px 20px}}
@@ -84,6 +94,7 @@ h1{{font-size:1.4rem;margin:0 0 4px}}h2{{font-size:.8rem;text-transform:uppercas
 .loc{{color:#6b7684;font-family:ui-monospace,monospace;font-size:.8rem;font-weight:400}}
 .detail{{margin:4px 0}}.ev,.fix{{color:#8b95a3;font-size:.82rem;margin:3px 0}}.fix{{color:#9fd3a8}}
 .ev{{font-family:ui-monospace,monospace}}a{{color:#7aa2ff}}.errs{{color:#8b95a3;font-size:.85rem}}
+.errs li{{margin:8px 0}}.why{{color:#8b95a3}}.errfix{{color:#9fd3a8}}
 </style></head><body>
 <h1>vulnscope report</h1>
 <p class='meta'>{html.escape(report.started_at)}</p>

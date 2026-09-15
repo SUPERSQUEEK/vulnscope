@@ -22,6 +22,7 @@ from pathlib import Path
 from ..engine import run_scan
 from ..scope import Scope, ScopeError
 from .. import reporting
+from .. import diagnostics
 
 REPORTS_DIR = Path.home() / ".vulnscope" / "reports"
 
@@ -78,6 +79,8 @@ class ScanRecord:
             "id": self.id, "targets": self.targets, "authorized_by": self.authorized_by,
             "status": self.status, "created_at": self.created_at, "error": self.error,
         }
+        if self.status == "error" and self.error:
+            out["error_detail"] = diagnostics.explain(self.error)
         if self.report is not None:
             out["counts"] = self.report.counts()
             out["worst"] = self.report.worst()
@@ -190,11 +193,13 @@ class ScanStore:
         if record is not None and record.report is not None:
             d = record.report.to_dict()
             d["id"] = record.id
-            return d
-        path = REPORTS_DIR / f"{scan_id}.json"
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-        return None
+        else:
+            path = REPORTS_DIR / f"{scan_id}.json"
+            if not path.exists():
+                return None
+            d = json.loads(path.read_text(encoding="utf-8"))
+        d["errors_detail"] = [diagnostics.explain(e) for e in d.get("errors", [])]
+        return d
 
     def load_report_object(self, scan_id):
         record = self.get(scan_id)
