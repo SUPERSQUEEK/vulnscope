@@ -37,7 +37,9 @@ Every scanner is dual-use, so the boundary is drawn explicitly and enforced in c
 |---|---|---|
 | **ports** | A curated set of common service ports; flags database/RDP/Redis/Telnet exposed to the internet as findings in their own right | One TCP connect per port, completed and closed like any client |
 | **tls** | Deprecated protocols (TLS ≤1.1), expired / self-signed / unverifiable certificates, certs expiring within 14 days, TLS 1.2-without-1.3 | Completes a normal handshake, reads the certificate, closes |
-| **http** | Missing security headers (HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`), server-version disclosure, and a short fixed list of sensitive paths (`/.git/config`, `/.env`, `/server-status`, …) | One GET per path — no wordlist, no content discovery |
+| **http** | Missing security headers (HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`), server-version disclosure, cookie flags (`Secure`/`HttpOnly`/`SameSite`), reflected-origin CORS misconfiguration, CMS/framework fingerprinting, a curated list of landmark server-version CVEs, and a short fixed list of sensitive paths (`/.git/config`, `/.env`, `/server-status`, …) | One GET per path/probe — no wordlist, no content discovery |
+| **dns** | Missing/weak SPF, missing or monitor-only DMARC, absent DNSSEC signing, absent CAA record | Queries a public resolver about records the domain owner already published; never connects to the target at all |
+| **banners** | Service banners on SSH/FTP/SMTP/POP3/IMAP; flags a short curated list of landmark backdoored/vulnerable versions (vsftpd 2.3.4, ProFTPD 1.3.3c, …) | Reads the banner the service sends unprompted on connect — no data is ever sent |
 
 Findings carry a severity, the evidence that produced them, and a remediation. Severity is a **named scale, not a fabricated CVSS number** — the real CVSS inputs (exploitability, privileges required) are things a non-intrusive scanner cannot observe, so inventing a score would be false precision.
 
@@ -86,10 +88,37 @@ Stated plainly, because they bound what a clean report means:
 - **No authenticated scanning.** It sees what an unauthenticated visitor sees — which is the attacker's view, and the point, but it will not find issues that require a login.
 - **Findings are what can be observed without intrusion.** A missing header is a fact; whether it is exploitable depends on the app. Severities reflect observable weakness, not confirmed exploitability.
 
-## GUI
+## Web UI
 
-A tkinter desktop app ships alongside the CLI - no extra dependencies, since
-tkinter is part of the Python standard library on Windows.
+The primary, comprehensive interface. A FastAPI backend serves the same
+engine, scope, and reporting modules the CLI uses - it doesn't reimplement any
+scanning logic, just drives it over HTTP.
+
+```bash
+pip install -r requirements-web.txt
+python -m vulnscope.web              # http://127.0.0.1:8642, localhost only by default
+```
+
+Enter targets, a scope (allow/deny rules, same syntax as a scope file),
+and who authorized the scan, then **Start scan**. Progress streams in live
+over Server-Sent Events; when it finishes you get a filterable, searchable
+findings dashboard (filter by severity or checker, search by text), a detail
+panel per finding with its evidence/remediation/reference, and a history
+sidebar of past scans (persisted as JSON under `~/.vulnscope/reports/`, so it
+survives a restart). **Download JSON** / **Download HTML** export the same
+reports the CLI produces. `authorized_by` and a non-empty scope are required
+here exactly as `--authorized-by` and `--scope` are on the command line -
+there is no way to start a scan without them.
+
+Pass `--host 0.0.0.0` to expose it beyond localhost; the default is
+localhost-only, deliberately, since this tool starts scans against real
+infrastructure.
+
+## Desktop GUI
+
+A tkinter desktop app also ships alongside the CLI - no extra dependencies,
+since tkinter is part of the Python standard library on Windows. Lighter-weight
+than the web UI, useful when you don't want to install anything extra.
 
 ```bash
 python -m vulnscope.gui          # or double-click vulnscope-gui.pyw
@@ -105,7 +134,9 @@ exactly as it is on the command line.
 
 ## Requires
 
-Python 3.10+ (standard library only). No dependencies.
+Python 3.10+ (standard library only) for the CLI and desktop GUI. No
+dependencies. The web UI additionally needs `fastapi` and `uvicorn`
+(`pip install -r requirements-web.txt`).
 
 ## License
 

@@ -1,6 +1,11 @@
 __pycache__/
 *.pyc
+.venv/
 *.html
 *.json
 !package.json
+!vulnscope/web/static/*.html
+!vulnscope/web/static/*.json
 scope.txt
+scope_test.txt
+server.log
