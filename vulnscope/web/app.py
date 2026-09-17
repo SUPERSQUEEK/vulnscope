@@ -74,7 +74,8 @@ def start_scan(req: ScanRequest):
     if not targets:
         raise HTTPException(400, "no targets given (enter targets or provide --ingest JSON)")
 
-    scan_id = store.start(targets, req.scope, req.authorized_by.strip(), req.timeout, ingest)
+    scan_id = store.start(targets, req.scope, req.authorized_by.strip(), req.timeout, ingest,
+                           ingest_text=req.ingest or "")
     return {"id": scan_id}
 
 
@@ -89,6 +90,20 @@ def scan_status(scan_id: str):
     if record is None:
         raise HTTPException(404, "unknown scan id")
     return record.summary()
+
+
+@app.get("/api/scan/{scan_id}/config")
+def scan_config(scan_id: str):
+    config = store.get_config(scan_id)
+    if config is None:
+        raise HTTPException(404, "unknown scan id")
+    return config
+
+
+@app.delete("/api/scan/{scan_id}")
+def delete_scan(scan_id: str):
+    store.delete(scan_id)
+    return {"ok": True}
 
 
 @app.get("/api/scan/{scan_id}/events")
