@@ -27,10 +27,16 @@ several of them exist because the obvious implementation is subtly wrong.
    directory/content discovery, or wordlists. The curated sensitive-path list
    in `checkers/http.py` is a short fixed list, not a wordlist, and stays that
    way.
-2. **`guard()` is called immediately before every socket.** See
+2. **Every target passes `guard()` before anything touches it.** See
    `scope.py:guard`. Fail-closed: a target is refused unless it matches an
-   explicit `allow` rule and no `deny` rule. There is no "scan everything"
-   flag and none may be added.
+   explicit `allow` rule and no `deny` rule. There is no "scan everything" flag
+   and none may be added. In practice `engine.py` guards once per target and
+   hands the vetted IP to the checkers, which is why invariant 3 exists - IP
+   pinning is what holds the window closed between the guard and the socket.
+   Note that `scope.py`'s own module docstring says every check calls `guard()`
+   immediately before opening a socket; the code does not work that way, and
+   the docstring overstates it. Any new code path that receives a target from
+   outside the engine must call `guard()` itself.
 3. **Checkers connect to the vetted IP the guard returned; they never
    re-resolve the hostname.** Re-resolving reopens the DNS-rebinding window
    `guard()` just closed. The hostname is still passed through for TLS SNI and
